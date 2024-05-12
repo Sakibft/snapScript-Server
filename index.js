@@ -2,7 +2,7 @@ const express = require('express')
 const cors = require('cors')
 const app = express()
 const port = process.env.PORT || 5000;
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
 // middleware
 app.use(cors());
@@ -31,13 +31,65 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
     // await client.connect();
     // added 
+    app.post('/blogs',async(req,res)=> {
+      const blogs = req.body;
+      const result = await blogsCollection.insertOne(blogs)
+      res.send(result)
+      console.log(blogs,'jajaj');
+    })
     app.get('/blogs', async(req,res)=>{
-      const blogs = blogsCollection.find();
+      const filter = req.query.filter;
+      const search = req.query.search;
+      console.log('s', search);
+
+      let query= {
+        title:{$regex : search, $options: 'i'}
+      }
+      if(filter) query = {category : filter}
+      // console.log(filter,'haha');
+      const blogs = blogsCollection.find(query);
       const result = await blogs.toArray()
       res.send(result)
      })
-  
+    //  details
+     app.get('/blogs/:id',async(req,res)=> {
+      const id = req.params.id;
+      const query = {_id: new ObjectId(id)}
+      const result = await blogsCollection.findOne(query)
+      res.send(result)
+      console.log(result);
+      console.log(id);
+    })
+    // inside the update page data by default show 
+     app.get('/update/:id',async(req,res)=> {
+      const id = req.params.id;
+      const query = {_id: new ObjectId(id)}
+      const result = await blogsCollection.findOne(query)
+      res.send(result)
+      console.log(result);
+      console.log(id);
+    })
+    // update
+     app.put('/realUpdate/:id',async(req,res)=> {
+       const update = req.body;
+       const id = req.params.id;
+       const query = {_id : new ObjectId(id)}
+       const options = {upsert: true}
+       const newUp = {
+        $set:{
+          ...update,
+        }
+       }
+       const result = await blogsCollection.updateOne(query, newUp, options)
+       res.send(result)
 
+       console.log('id',id);
+       console.log('update',update);
+     
+    })
+    
+  
+  
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
