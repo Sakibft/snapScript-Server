@@ -29,6 +29,7 @@ const client = new MongoClient(uri, {
 
 async function run() {
   const blogsCollection = client.db("b9a11").collection("allBlogs");
+  const wishCollection = client.db("b9a11").collection("wish");
   try {
     // Connect the client to the server	(optional starting in v4.7)
     // await client.connect();
@@ -89,8 +90,25 @@ async function run() {
        console.log('update',update);
      
     })
+    // post wish
+    app.post('/wish',async(req,res)=> {
+      const wish = req.body;
+      const result = await wishCollection.insertOne(wish)
+      res.send(result)
+      console.log(wish,'jajaj');
+    })
+  //  get wish
+ 
+  app.get('/wish/:email', async(req,res)=>{
+    const email = req.params.email;
     
-  
+    const query = {userEmail : email}
+    // console.log(user);
+   const wish =  wishCollection.find(query)
+   const result = await wish.toArray()
+   console.log(result);
+   res.send(result)
+  })
   
 
     // Send a ping to confirm a successful connection
