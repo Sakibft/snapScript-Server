@@ -69,7 +69,7 @@ async function run() {
       console.log(result);
       console.log(id);
     })
-    // update
+    // update a blogs
      app.put('/realUpdate/:id',async(req,res)=> {
        const update = req.body;
        const id = req.params.id;
