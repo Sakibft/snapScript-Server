@@ -44,7 +44,7 @@ async function run() {
     app.get('/blogs', async(req,res)=>{
       const filter = req.query.filter;
       const search = req.query.search;
-      console.log('s', search);
+      // console.log( search);
 
       let query= {
         title:{$regex : search, $options: 'i'}
@@ -89,7 +89,6 @@ async function run() {
 
        console.log('id',id);
        console.log('update',update);
-     
     })
     // post wish
     app.post('/wish',async(req,res)=> {
@@ -133,7 +132,30 @@ app.get('/comment/:id', async(req,res)=>{
    console.log(result);
    console.log(result);
    console.log(id,'client');
- 
+})
+app.get('/featured',async(req,res)=>{
+  try {
+    const aggregationPipeline = [
+      {
+        $addFields: {
+          longDescriptionLength: { $strLenCP: "$longDescription" } 
+        }
+      },
+      {
+        $sort: { longDescriptionLength: -1 }  
+      },
+      {
+        $limit: 10  
+      }
+    ];
+    // Execute the aggregation pipeline
+    const featuredBlogs = await blogsCollection.aggregate(aggregationPipeline).toArray();
+
+    res.send(featuredBlogs);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server Error' });
+  }
 })
  
 
