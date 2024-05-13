@@ -1,19 +1,41 @@
 const express = require('express')
 const cors = require('cors')
+const jwt = require('jsonwebtoken')
+const cookieParser = require('cookie-parser')
 const app = express()
 require('dotenv').config()
 const port = process.env.PORT || 5000;
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
 // middleware
-app.use(cors());
+app.use(cors({
+  origin:[
+    'http://localhost:5173', // Replace this with your frontend origin
+  ], 
+  credentials: true // Enable credentials
+}));
 app.use(express.json())
+app.use(cookieParser())
+// create middleware
+const verifyToken = (req,res,next) => {
+  const token = req?.cookies?.token;
+  if(!token){
+    return res.status(401).send({message: 'unauthorized access'})
+  }
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET,(error,decoded) =>{
+    if(error){
+      return res.status(401).send({message: 'unauthorized access'})
+    }
+    req.user = decoded;
+    next()
+  })
+// console.log(token, 'inside the verifytoken');
+}
 
 app.get('/', (req, res) => {
   res.send('Hello World sakib!')
 })
-// b9a11
-// NCDMbx3pyBJHtE4z
+ 
  
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.rriax4f.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
@@ -32,9 +54,28 @@ async function run() {
   const wishCollection = client.db("b9a11").collection("wish");
   const commentCollection = client.db("b9a11").collection("comment");
   try {
-    // Connect the client to the server	(optional starting in v4.7)
-    // await client.connect();
-    // added 
+    // auth related apo
+    app.post('/jwt', async(req,res)=> {
+      const user = req.body;
+      console.log(user);
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {expiresIn:'1h'})
+      res
+      .cookie('token', token , {
+        httpOnly:true,
+        secure:true,
+        sameSite:'none'
+      })
+      .send({success:true});
+    })
+
+    app.post('/logout',async(req,res)=>{
+      const user = req.body;
+      console.log('logging out', user);
+      res.clearCookie('token', {maxAge:0}).send({success:true})
+    })
+ 
+
+//  all blogs 
     app.post('/blogs',async(req,res)=> {
       const blogs = req.body;
       const result = await blogsCollection.insertOne(blogs)
@@ -98,12 +139,17 @@ async function run() {
       console.log(wish,'jajaj');
     })
   //  get wish
-  app.get('/wish/:email', async(req,res)=>{
+  app.get('/wish/:email', verifyToken, async(req,res)=>{
     const email = req.params.email;
+    if(req.user.email !== email){
+      return res.status(403).send({message: 'forbidden access'})
+    }
+    //  console.log(req.user,'it is veryFied');
     const query = {userEmail : email}
    const wish =  wishCollection.find(query)
    const result = await wish.toArray()
    console.log(result);
+  //  console.log(req.cookies, "from wishlist");
    res.send(result)
   })
 // delete from wishlist
